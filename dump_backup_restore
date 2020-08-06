@@ -1,0 +1,103 @@
+pg_dump -Cs DB_NAME > /tmp/schema_dump 
+
+-C switch adds the CREATE statements
+-s switch specifies dumping only the schema not the data
+If you want the data as well then use
+pg_dump -C DB_NAME > /tmp/schema_dump 
+
+If you want ONLY the data and not the database or table CREATE statements then use
+pg_dump -a DB_NAME > /tmp/data_dump 
+
+All of the above dump the data as COPY commands which are faster but may not be compatible with other database engines.
+If you want to dump data from postgres into another database then dump as INSERT statements by using
+pg_dump -D DB_NAME > /tmp/data_dump_as_inserts 
+
+This uses the INSERT INTO table (col1, col2) VALUES (val1, val2) format. Using a lowercase "d" omits the column mappings for a slight increase in speed if you know the table is structured in the same way on the target database.
+To restore the data:
+createdb -T template0 dbname 
+psql dbname < infile 
+
+***********************************
+/usr/pgsql-9.5/bin/pg_dump tox21enricher  -h localhost > mytox21dump.sql
+
+pg_dump -F c -h localhost mydb -U postgres export.dmp
+
+********dump data only************
+
+pg_dump -a DB_NAME > /tmp/data_dump 
+-----------dump table____________
+
+Use --table to tell pg_dump what table it has to backup:
+
+pg_dump --host localhost --port 5432 --username postgres --format plain --ignore-version --verbose --file "C:\temp\filename.backup" --table public.tablename dbname
+****************************************
+Handling Large Databases
+****************************************
+pg_dump dbname | gzip > filename.gz
+
+Reload with:
+
+gunzip -c filename.gz | psql dbname
+Use split. The split command allows you to split the output into smaller files that are acceptable in size to the underlying file system. For example, to make chunks of 1 megabyte:
+pg_dump dbname | split -b 1m - filename
+
+Reload with:
+cat filename* | psql dbname
+
+Use pg_dump's custom dump format. If PostgreSQL was built on a system with the zlib compression library installed, the custom dump format will compress data as it writes it to the output file. This will produce dump file sizes similar to using gzip, but it has the added advantage that tables can be restored selectively. The following command dumps a database using the custom dump format:
+
+pg_dump -Fc dbname > filename
+A custom-format dump is not a script for psql, but instead must be restored with pg_restore, for example:
+
+pg_restore -d dbname filename
+************************************
+Assume we have dumped a database called mydb into a custom-format dump file:
+
+$ pg_dump -Fc mydb > db.dump
+To drop the database and recreate it from the dump:
+
+$ dropdb mydb
+$ pg_restore -C -d postgres db.dump
+The database named in the -d switch can be any database existing in the cluster; pg_restore only uses it to issue the CREATE DATABASE command for mydb. With -C, data is always restored into the database name that appears in the dump file.
+
+To reload the dump into a new database called newdb:
+
+$ createdb -T template0 newdb
+$ pg_restore -d newdb db.dump
+Notice we don't use -C, and instead connect directly to the database to be restored into. Also note that we clone the new database from template0 not template1, to ensure it is initially empty.
+
+To reorder database items, it is first necessary to dump the table of contents of the archive:
+
+$ pg_restore -l db.dump > db.list
+restore gzp file:
+gunzip <ats_raw_data.sql.gz | psql -h localhost -p 5433 -U postgres -d tox21_hts
+dump to zip file:
+pg_dump -h postgres -U sandbox -t ats_raw_data | gzip > /backups/ats_raw_data.sql.gz
+*****************************************
+For text file backups:
+Backup:  $ pg_dump -U {user-name} {source_db} -f {dumpfilename.sql}
+Restore: $ psql -U {user-name} -d {desintation_db}-f {dumpfilename.sql}
+
+for tar.zip file:
+Backup:  $ pg_dump -U {user-name} {source_db} -F tar  -f {dumpfilename.tar.gz}
+Restore: $ psql -U {user-name} -d {desintation_db}-f {dumpfilename.tar.gz}
+
+Backup A Single Database:
+The following command will backup the "mydatabase" that belongs to "dbuser" to the file mybackup.sql
+pg_dump -h 127.0.0.1 -U dbuser mydatabase -f mybackup.sql
+
+You will be prompted for the password. If you were going to put this in a script, then you can set the environment variable PGPASSWORD and pg_dump will use it instead of prompting you as follows:
+
+PGPASSWORD="mypassword" 
+pg_dump -h 127.0.0.1 -U dbuser mydatabase -f mybackup.sql
+Restoring the backup
+Above we created our backup.
+
+To restore the .sql file backup assuming the database already exists:
+
+pg_restore -h 127.0.0.1 -U dbuser  -d mydatabase mybackup.sql
+If the database does not yet exist. (For example we are restoring to a new server)
+
+pg_restore -h 127.0.0.1 -U dbuser  -C -d  mydatabase mybackup.sql
+******************
+
