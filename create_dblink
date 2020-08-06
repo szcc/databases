@@ -1,0 +1,10 @@
+create extension dblink;
+ 
+ connection string :hostaddr=127.0.0.1 port=5432 dbname=mydb user=postgres password=mypasswd. 
+ 
+  select dblink_connect('chemmap', 'hostaddr=10.98.105.92 port=5433 dbname=chemmap_dev user=postgres password=password');
+ return is OK 
+ --usage: 
+   SELECT *
+   FROM   dblink('chemmap','SELECT id from chemicals limit (10)')
+   AS     tb2(id int);
